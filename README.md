@@ -80,23 +80,19 @@ int main(int argc, char* argv[]) {
     using opt::Required;
 
     Option<opt::StringView> cmd("cmd", Placeholder("COMMAND"), Required);
-    EnumOption<Mode> mode("mode", Required, {
-        { "oneshot", OneShot },
-        { "after", OneShot },
-        { "repeat", Repeat },
-        { "every", Repeat }
-    });
+    EnumOption<Mode> mode({ { "oneshot", OneShot },
+                            { "after", OneShot },
+                            { "repeat", Repeat },
+                            { "every", Repeat } }, "mode", Required);
     Option<float> timeout("timeout", Placeholder("TIMEOUT"), Required);
-    EnumOption<Unit>("unit", Required, {
-        { "seconds", Second },
-        { "sec", Second },
-        { "s", Second },
-        { "minutes", Minute },
-        { "m", Minute },
-        { "hours", Hour },
-        { "hr", Hour },
-        { "h", Hour }
-    });
+    EnumOption<Unit>({ { "seconds", Second },
+                       { "sec", Second },
+                       { "s", Second },
+                       { "minutes", Minute },
+                       { "m", Minute },
+                       { "hours", Hour },
+                       { "hr", Hour },
+                       { "h", Hour } }, "unit", Required);
     Option<bool> quiet("quiet", false);
     Option<bool> stop_on_error("stop_on_error", false);
     Option<float> until("until", Placeholder("TIME"), 0.0f);
