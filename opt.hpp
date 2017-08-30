@@ -503,6 +503,11 @@ bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
     return true;
 }
 
+// Force enum mode (not compatible with array/vector/set options)
+template<typename T>
+using EnumOption<T> = Option<T, true>;
+
+// enum option
 template<typename T>
 class Option<T, true> : public OptionBase {
 public:
