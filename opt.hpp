@@ -29,7 +29,7 @@
 #include <complex>
 #include <functional>
 #include <iostream>
-#include <map>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -503,9 +503,98 @@ bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
     return true;
 }
 
+
+template<typename T>
+class Option<std::set<T>, false> : public OptionBase {
+public:
+    using value_type = std::set<T>;
+
+    Option(StringView key, value_type const& value = value_type())
+        : OptionBase(key, default_placeholder, false), value_(value)
+        {}
+
+    Option(StringView key, RequiredTag, value_type const& value = value_type())
+        : OptionBase(key, default_placeholder, true), value_(value)
+        {}
+
+    Option(StringView key, Placeholder p,
+           value_type const& value = value_type())
+        : OptionBase(key, p.str, false), value_(value)
+        {}
+
+    Option(StringView key, Placeholder p, RequiredTag,
+           value_type const& value = value_type())
+        : OptionBase(key, p.str, true), value_(value)
+        {}
+
+    value_type const& get() const {
+        return value_;
+    }
+
+    operator value_type const&() const {
+        return value_;
+    }
+
+    bool parse(StringView arg, std::ostream& err = std::cerr) override final;
+
+private:
+    template<typename , bool>
+    friend class Option;
+
+    static const std::string default_placeholder;
+
+    value_type value_;
+};
+
+template<typename T>
+const std::string Option<std::set<T>, false>::default_placeholder(
+    "{ " + Option<T>("").placeholder().to_string() + ", ... }");
+
+template<typename T>
+bool Option<std::set<T>, false>::parse(StringView arg, std::ostream& err) {
+    reset();
+
+    if (arg.empty())
+        return true;
+
+    Option<T> opt(key());
+
+    if (arg.front() != '{' || arg.back() != '}') {
+        if (!opt.parse(arg, err))
+            return false;
+
+        value_.clear();
+        value_.insert(std::move(opt.value_));
+
+        set();
+        return true;
+    }
+
+    value_.clear();
+    arg = trim(arg.substr(1, arg.size() - 2));
+
+    while (arg.size()) {
+        auto comma = std::min(arg.find(','), arg.size());
+        auto sub = trim(arg.substr(0, comma));
+
+        if (sub.size()) {
+            if (!opt.parse(sub, err))
+                return false;
+
+            value_.insert(std::move(opt.value_));
+        }
+
+        arg = arg.substr(comma + 1);
+    }
+
+    set();
+    return true;
+}
+
+
 // Force enum mode (not compatible with array/vector/set options)
 template<typename T>
-using EnumOption<T> = Option<T, true>;
+using EnumOption = Option<T, true>;
 
 // enum option
 template<typename T>
