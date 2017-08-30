@@ -332,11 +332,11 @@ public:
     using value_type = std::array<T, N>;
 
     Option(StringView key, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, false), value_(value)
+        : OptionBase(key, default_placeholder(), false), value_(value)
         {}
 
     Option(StringView key, RequiredTag, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, true), value_(value)
+        : OptionBase(key, default_placeholder(), true), value_(value)
         {}
 
     Option(StringView key, Placeholder p,
@@ -363,16 +363,24 @@ private:
     template<typename, bool>
     friend class Option;
 
-    static const std::string default_placeholder;
+    static StringView default_placeholder();
 
     value_type value_;
 };
 
 template<typename T, std::size_t N, bool Enum>
-const std::string Option<std::array<T, N>, Enum>::default_placeholder(
-    "{ " + std::to_string(N) + "x" +
-    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
-    " }");
+StringView Option<std::array<T, N>, Enum>::default_placeholder() {
+    static std::string p;
+
+    if (!p.empty())
+        return p;
+    
+    Option<T, std::is_enum<T>::value || Enum> opt("");
+
+    p = "{" + std::to_string(N) + "x" + opt.placeholder().to_string() + "}";
+
+    return p;
+}
 
 template<typename T, std::size_t N, bool Enum>
 bool Option<std::array<T, N>, Enum>::parse(StringView arg, std::ostream& err) {
@@ -422,11 +430,11 @@ public:
     using value_type = std::vector<T>;
 
     Option(StringView key, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, false), value_(value)
+        : OptionBase(key, default_placeholder(), false), value_(value)
         {}
 
     Option(StringView key, RequiredTag, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, true), value_(value)
+        : OptionBase(key, default_placeholder(), true), value_(value)
         {}
 
     Option(StringView key, Placeholder p,
@@ -453,16 +461,24 @@ private:
     template<typename, bool>
     friend class Option;
 
-    static const std::string default_placeholder;
+    static StringView default_placeholder();
 
     value_type value_;
 };
 
 template<typename T, bool Enum>
-const std::string Option<std::vector<T>, Enum>::default_placeholder(
-    "{ " +
-    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
-    ", ... }");
+StringView Option<std::vector<T>, Enum>::default_placeholder() {
+    static std::string p;
+
+    if (!p.empty())
+        return p;
+    
+    Option<T, std::is_enum<T>::value || Enum> opt("");
+
+    p = "{" + opt.placeholder().to_string() + ", ... }";
+
+    return p;
+}
 
 template<typename T, bool Enum>
 bool Option<std::vector<T>, Enum>::parse(StringView arg, std::ostream& err) {
@@ -514,11 +530,11 @@ public:
     using value_type = std::set<T>;
 
     Option(StringView key, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, false), value_(value)
+        : OptionBase(key, default_placeholder(), false), value_(value)
         {}
 
     Option(StringView key, RequiredTag, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, true), value_(value)
+        : OptionBase(key, default_placeholder(), true), value_(value)
         {}
 
     Option(StringView key, Placeholder p,
@@ -545,16 +561,24 @@ private:
     template<typename, bool>
     friend class Option;
 
-    static const std::string default_placeholder;
+    static StringView default_placeholder();
 
     value_type value_;
 };
 
 template<typename T, bool Enum>
-const std::string Option<std::set<T>, Enum>::default_placeholder(
-    "{ " +
-    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
-    ", ... }");
+StringView Option<std::set<T>, Enum>::default_placeholder() {
+    static std::string p;
+
+    if (!p.empty())
+        return p;
+    
+    Option<T, std::is_enum<T>::value || Enum> opt("");
+
+    p = "{" + opt.placeholder().to_string() + ", ... }";
+
+    return p;
+}
 
 template<typename T, bool Enum>
 bool Option<std::set<T>, Enum>::parse(StringView arg, std::ostream& err) {
@@ -610,17 +634,13 @@ public:
     using value_map = std::initializer_list<std::pair<StringView, T>>;
 
     Option(StringView key, value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, false), value_(value)
-    {
-        make_placeholder();
-    }
+        : OptionBase(key, default_placeholder(), false), value_(value)
+        {}
 
     Option(StringView key, RequiredTag,
            value_type const& value = value_type())
-        : OptionBase(key, default_placeholder, true), value_(value)
-    {
-        make_placeholder();
-    }
+        : OptionBase(key, default_placeholder(), true), value_(value)
+        {}
 
     Option(StringView key, Placeholder p,
            value_type const& value = value_type())
@@ -648,19 +668,19 @@ private:
     template<typename, bool>
     friend class Option;
 
-    static const std::string default_placeholder;
-    static std::string make_placeholder();
+    static StringView default_placeholder();
 
     value_type value_;
 };
 
 template<typename T>
-const std::string Option<T, true>::default_placeholder(
-    Option<T, true>::make_placeholder());
+StringView Option<T, true>::default_placeholder() {
+    static std::string p;
+    
+    if (!p.empty())
+        return p;
 
-template<typename T>
-std::string Option<T, true>::make_placeholder() {
-    std::string p = "(";
+    p = "(";
 
     auto it = values.begin(), end = values.end();
     if (it != end)
