@@ -193,7 +193,7 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     value_type value_;
@@ -255,7 +255,7 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     value_type value_;
@@ -326,8 +326,8 @@ bool Option<std::complex<T>, false>::parse(StringView arg, std::ostream& err) {
 }
 
 
-template<typename T, std::size_t N>
-class Option<std::array<T, N>, false> : public OptionBase {
+template<typename T, std::size_t N, bool Enum>
+class Option<std::array<T, N>, Enum> : public OptionBase {
 public:
     using value_type = std::array<T, N>;
 
@@ -360,7 +360,7 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     static const std::string default_placeholder;
@@ -368,12 +368,14 @@ private:
     value_type value_;
 };
 
-template<typename T, std::size_t N>
-const std::string Option<std::array<T, N>, false>::default_placeholder(
-    "{ " + std::to_string(N) + "x" + Option<T>("").placeholder().to_string() + " }");
+template<typename T, std::size_t N, bool Enum>
+const std::string Option<std::array<T, N>, Enum>::default_placeholder(
+    "{ " + std::to_string(N) + "x" +
+    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
+    " }");
 
-template<typename T, std::size_t N>
-bool Option<std::array<T, N>, false>::parse(StringView arg, std::ostream& err) {
+template<typename T, std::size_t N, bool Enum>
+bool Option<std::array<T, N>, Enum>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
@@ -386,7 +388,7 @@ bool Option<std::array<T, N>, false>::parse(StringView arg, std::ostream& err) {
 
     arg = trim(arg.substr(1, arg.size() - 2));
 
-    Option<T> opt(key());
+    Option<T, std::is_enum<T>::value || Enum> opt(key());
     auto it = value_.begin(), end = value_.end();
 
     while (arg.size() && it != end) {
@@ -414,8 +416,8 @@ bool Option<std::array<T, N>, false>::parse(StringView arg, std::ostream& err) {
 }
 
 
-template<typename T>
-class Option<std::vector<T>, false> : public OptionBase {
+template<typename T, bool Enum>
+class Option<std::vector<T>, Enum> : public OptionBase {
 public:
     using value_type = std::vector<T>;
 
@@ -448,7 +450,7 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     static const std::string default_placeholder;
@@ -456,18 +458,20 @@ private:
     value_type value_;
 };
 
-template<typename T>
-const std::string Option<std::vector<T>, false>::default_placeholder(
-    "{ " + Option<T>("").placeholder().to_string() + ", ... }");
+template<typename T, bool Enum>
+const std::string Option<std::vector<T>, Enum>::default_placeholder(
+    "{ " +
+    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
+    ", ... }");
 
-template<typename T>
-bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
+template<typename T, bool Enum>
+bool Option<std::vector<T>, Enum>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
         return true;
 
-    Option<T> opt(key());
+    Option<T, std::is_enum<T>::value || Enum> opt(key());
 
     if (arg.front() != '{' || arg.back() != '}') {
         if (!opt.parse(arg, err))
@@ -504,8 +508,8 @@ bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
 }
 
 
-template<typename T>
-class Option<std::set<T>, false> : public OptionBase {
+template<typename T, bool Enum>
+class Option<std::set<T>, Enum> : public OptionBase {
 public:
     using value_type = std::set<T>;
 
@@ -538,7 +542,7 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     static const std::string default_placeholder;
@@ -546,18 +550,20 @@ private:
     value_type value_;
 };
 
-template<typename T>
-const std::string Option<std::set<T>, false>::default_placeholder(
-    "{ " + Option<T>("").placeholder().to_string() + ", ... }");
+template<typename T, bool Enum>
+const std::string Option<std::set<T>, Enum>::default_placeholder(
+    "{ " +
+    Option<T, std::is_enum<T>::value || Enum>("").placeholder().to_string() +
+    ", ... }");
 
-template<typename T>
-bool Option<std::set<T>, false>::parse(StringView arg, std::ostream& err) {
+template<typename T, bool Enum>
+bool Option<std::set<T>, Enum>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
         return true;
 
-    Option<T> opt(key());
+    Option<T, std::is_enum<T>::value || Enum> opt(key());
 
     if (arg.front() != '{' || arg.back() != '}') {
         if (!opt.parse(arg, err))
@@ -592,7 +598,7 @@ bool Option<std::set<T>, false>::parse(StringView arg, std::ostream& err) {
 }
 
 
-// Force enum mode (not compatible with array/vector/set options)
+// force enum mode
 template<typename T>
 using EnumOption = Option<T, true>;
 
@@ -639,7 +645,7 @@ public:
     static const value_map values;
 
 private:
-    template<typename , bool>
+    template<typename, bool>
     friend class Option;
 
     static const std::string default_placeholder;
@@ -649,8 +655,8 @@ private:
 };
 
 template<typename T>
-const std::string Option<T, true>::default_placeholder =
-    Option<T, true>::make_placeholder();
+const std::string Option<T, true>::default_placeholder(
+    Option<T, true>::make_placeholder());
 
 template<typename T>
 std::string Option<T, true>::make_placeholder() {
