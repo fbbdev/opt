@@ -193,6 +193,9 @@ public:
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
 
 private:
+    template<typename , bool>
+    friend class Option;
+
     value_type value_;
 };
 
@@ -250,7 +253,11 @@ public:
     }
 
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
+
 private:
+    template<typename , bool>
+    friend class Option;
+
     value_type value_;
 };
 
@@ -351,7 +358,11 @@ public:
     }
 
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
+
 private:
+    template<typename , bool>
+    friend class Option;
+
     static const std::string default_placeholder;
 
     value_type value_;
@@ -359,7 +370,7 @@ private:
 
 template<typename T, std::size_t N>
 const std::string Option<std::array<T, N>, false>::default_placeholder(
-    "{ " + std::to_string(N) + "x" + type_placeholder<T> + " }");
+    "{ " + std::to_string(N) + "x" + Option<T>("").placeholder().to_string() + " }");
 
 template<typename T, std::size_t N>
 bool Option<std::array<T, N>, false>::parse(StringView arg, std::ostream& err) {
@@ -435,7 +446,11 @@ public:
     }
 
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
+
 private:
+    template<typename , bool>
+    friend class Option;
+
     static const std::string default_placeholder;
 
     value_type value_;
@@ -443,7 +458,7 @@ private:
 
 template<typename T>
 const std::string Option<std::vector<T>, false>::default_placeholder(
-    "{ " + std::string(type_placeholder<T>) + ", ... }");
+    "{ " + Option<T>("").placeholder().to_string() + ", ... }");
 
 template<typename T>
 bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
@@ -452,16 +467,21 @@ bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
     if (arg.empty())
         return true;
 
-    if (arg.front() != '{' || arg.back() != '}') {
-        error(err) << "list values should be wrapped in curly braces" << std::endl;
-        return false;
-    }
-
-    arg = trim(arg.substr(1, arg.size() - 2));
-
     Option<T> opt(key());
 
+    if (arg.front() != '{' || arg.back() != '}') {
+        if (!opt.parse(arg, err))
+            return false;
+
+        value_.clear();
+        value_.push_back(std::move(opt.value_));
+
+        set();
+        return true;
+    }
+
     value_.clear();
+    arg = trim(arg.substr(1, arg.size() - 2));
 
     while (arg.size()) {
         auto comma = std::min(arg.find(','), arg.size());
@@ -525,6 +545,9 @@ public:
     static const value_map values;
 
 private:
+    template<typename , bool>
+    friend class Option;
+
     static const std::string default_placeholder;
     static std::string make_placeholder();
 
