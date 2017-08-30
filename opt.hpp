@@ -31,6 +31,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #if (__cplusplus >= 201703L)
@@ -158,7 +159,7 @@ struct Placeholder {
 };
 
 
-template<typename T>
+template<typename T, bool = std::is_enum<T>::value>
 class Option : public OptionBase {
 public:
     using value_type = T;
@@ -190,6 +191,7 @@ public:
     }
 
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
+
 private:
     value_type value_;
 };
@@ -217,7 +219,7 @@ bool Option<double>::parse(StringView, std::ostream&);
 
 
 template<typename T>
-class Option<std::complex<T>> : public OptionBase {
+class Option<std::complex<T>, false> : public OptionBase {
 public:
     using value_type = std::complex<T>;
 
@@ -253,7 +255,7 @@ private:
 };
 
 template<typename T>
-bool Option<std::complex<T>>::parse(StringView arg, std::ostream& err) {
+bool Option<std::complex<T>, false>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
@@ -318,7 +320,7 @@ bool Option<std::complex<T>>::parse(StringView arg, std::ostream& err) {
 
 
 template<typename T, std::size_t N>
-class Option<std::array<T, N>> : public OptionBase {
+class Option<std::array<T, N>, false> : public OptionBase {
 public:
     using value_type = std::array<T, N>;
 
@@ -356,11 +358,11 @@ private:
 };
 
 template<typename T, std::size_t N>
-const std::string Option<std::array<T, N>>::default_placeholder(
+const std::string Option<std::array<T, N>, false>::default_placeholder(
     "{ " + std::to_string(N) + "x" + type_placeholder<T> + " }");
 
 template<typename T, std::size_t N>
-bool Option<std::array<T, N>>::parse(StringView arg, std::ostream& err) {
+bool Option<std::array<T, N>, false>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
@@ -402,7 +404,7 @@ bool Option<std::array<T, N>>::parse(StringView arg, std::ostream& err) {
 
 
 template<typename T>
-class Option<std::vector<T>> : public OptionBase {
+class Option<std::vector<T>, false> : public OptionBase {
 public:
     using value_type = std::vector<T>;
 
@@ -440,11 +442,11 @@ private:
 };
 
 template<typename T>
-const std::string Option<std::vector<T>>::default_placeholder(
+const std::string Option<std::vector<T>, false>::default_placeholder(
     "{ " + std::string(type_placeholder<T>) + ", ... }");
 
 template<typename T>
-bool Option<std::vector<T>>::parse(StringView arg, std::ostream& err) {
+bool Option<std::vector<T>, false>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
@@ -482,35 +484,32 @@ bool Option<std::vector<T>>::parse(StringView arg, std::ostream& err) {
 }
 
 template<typename T>
-class EnumOption : public OptionBase {
+class Option<T, true> : public OptionBase {
 public:
     using value_type = T;
-    using value_map = std::map<StringView, value_type>;
+    using value_map = std::initializer_list<std::pair<StringView, T>>;
 
-    EnumOption(value_map&& values, StringView key,
-               value_type const& value = value_type())
-        : OptionBase(key, false), values_(std::move(values)), value_(value)
+    Option(StringView key, value_type const& value = value_type())
+        : OptionBase(key, default_placeholder, false), value_(value)
     {
         make_placeholder();
     }
 
-    EnumOption(value_map&& values, StringView key, RequiredTag,
-               value_type const& value = value_type())
-        : OptionBase(key, true), values_(std::move(values)), value_(value)
+    Option(StringView key, RequiredTag,
+           value_type const& value = value_type())
+        : OptionBase(key, default_placeholder, true), value_(value)
     {
         make_placeholder();
     }
 
-    EnumOption(value_map&& values, StringView key, Placeholder p,
-               value_type const& value = value_type())
-        : OptionBase(key, p.str, false),
-          values_(std::move(values)), value_(value)
+    Option(StringView key, Placeholder p,
+           value_type const& value = value_type())
+        : OptionBase(key, p.str, false), value_(value)
         {}
 
-    EnumOption(value_map&& values, StringView key, Placeholder p,
-               RequiredTag, value_type const& value = value_type())
-        : OptionBase(key, p.str, true),
-          values_(std::move(values)), value_(value)
+    Option(StringView key, Placeholder p, RequiredTag,
+           value_type const& value = value_type())
+        : OptionBase(key, p.str, true), value_(value)
         {}
 
     value_type const& get() const {
@@ -522,47 +521,55 @@ public:
     }
 
     bool parse(StringView arg, std::ostream& err = std::cerr) override final;
-private:
-    void make_placeholder();
 
-    std::map<StringView, value_type> values_;
+    static const value_map values;
+
+private:
+    static const std::string default_placeholder;
+    static std::string make_placeholder();
+
     value_type value_;
-    std::string default_placeholder;
 };
 
 template<typename T>
-void EnumOption<T>::make_placeholder() {
-    default_placeholder = "(";
+const std::string Option<T, true>::default_placeholder =
+    Option<T, true>::make_placeholder();
 
-    auto it = values_.begin(), end = values_.end();
+template<typename T>
+std::string Option<T, true>::make_placeholder() {
+    std::string p = "(";
+
+    auto it = values.begin(), end = values.end();
     if (it != end)
-        default_placeholder += (it++)->first.to_string();
+        p += (it++)->first.to_string();
 
     for (; it != end; ++it)
-        default_placeholder += "|" + it->first.to_string();
+        p += "|" + it->first.to_string();
 
-    default_placeholder += ")";
+    p += ")";
 
-    placeholder(default_placeholder);
+    return p;
 }
 
 template<typename T>
-bool EnumOption<T>::parse(StringView arg, std::ostream& err) {
+bool Option<T, true>::parse(StringView arg, std::ostream& err) {
     reset();
 
     if (arg.empty())
         return true;
 
-    auto it = values_.find(arg);
-    if (it == values_.end()) {
-        error(err) << "invalid value '" << arg << "'" << std::endl;
-        return false;
+    auto lc = to_lower(arg);
+
+    for (auto it = values.begin(), end = values.end(); it != end; ++it) {
+        if (it->first == lc) {
+            value_ = it->second;
+            set();
+            return true;
+        }
     }
 
-    value_ = it->second;
-
-    set();
-    return true;
+    error(err) << "invalid value '" << arg << "'" << std::endl;
+    return false;
 }
 
 } /* namespace opt */

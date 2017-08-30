@@ -58,13 +58,23 @@ void opt::usage(opt::StringView program_name,
 
 ## Example
 
+See [example/run.cpp](blob/master/example/run.cpp) for more details.
+
 ```c++
 // run.cpp
-#include <opt.hpp>
+#include "opt.hpp"
 
 enum Mode {
     OneShot,
     Repeat,
+};
+
+template<>
+const opt::Option<Mode>::value_map opt::Option<Mode>::values = {
+    { "oneshot", OneShot },
+    { "after", OneShot },
+    { "repeat", Repeat },
+    { "every", Repeat },
 };
 
 enum Unit {
@@ -73,26 +83,27 @@ enum Unit {
     Hour,
 };
 
+template<>
+const opt::Option<Unit>::value_map opt::Option<Unit>::values = {
+    { "seconds", Second },
+    { "sec", Second },
+    { "s", Second },
+    { "minutes", Minute },
+    { "m", Minute },
+    { "hours", Hour },
+    { "hr", Hour },
+    { "h", Hour },
+};
+
 int main(int argc, char* argv[]) {
     using opt::Option;
-    using opt::EnumOption;
     using opt::Placeholder;
     using opt::Required;
 
     Option<opt::StringView> cmd("cmd", Placeholder("COMMAND"), Required);
-    EnumOption<Mode> mode({ { "oneshot", OneShot },
-                            { "after", OneShot },
-                            { "repeat", Repeat },
-                            { "every", Repeat } }, "mode", Required);
+    Option<Mode> mode("mode", Required);
     Option<float> timeout("timeout", Placeholder("TIMEOUT"), Required);
-    EnumOption<Unit>({ { "seconds", Second },
-                       { "sec", Second },
-                       { "s", Second },
-                       { "minutes", Minute },
-                       { "m", Minute },
-                       { "hours", Hour },
-                       { "hr", Hour },
-                       { "h", Hour } }, "unit", Required);
+    Option<Unit> unit("unit", Required);
     Option<bool> quiet("quiet", false);
     Option<bool> stop_on_error("stop_on_error", false);
     Option<float> until("until", Placeholder("TIME"), 0.0f);
@@ -102,6 +113,15 @@ int main(int argc, char* argv[]) {
                     { quiet, stop_on_error, until, times },
                     argv, argv + argc))
         return -1;
+
+    if (!cmd.is_set() || !mode.is_set() ||
+            !timeout.is_set() || !unit.is_set()) {
+        std::cerr << "error: required options are not set" << std::endl;
+        opt::usage(argv[0],
+                   { cmd, mode, timeout, unit },
+                   { quiet, stop_on_error, until, times });
+        return -1;
+    }
 
     /* ... */
 
@@ -115,10 +135,10 @@ Compile and run:
 # g++ -std=c++14 -o run run.cpp opt/opt.cpp -Iopt
 
 # ./run help
-Usage: ./run [help] [cmd=]COMMAND [mode=](after|every|oneshot|repeat)
-  [timeout=]TIMEOUT [unit=](h|hours|hr|m|minutes|s|sec|seconds) [quiet]
+Usage: ./run [help] [cmd=]COMMAND [mode=](oneshot|after|repeat|every)
+  [timeout=]TIMEOUT [unit=](seconds|sec|s|minutes|m|hours|hr|h) [quiet]
   [stop_on_error] [until=TIME] [times=INT]
 
-# ./run "echo hello" every 500m sec times=10
+# ./run "echo hello" every 500m sec times=10 stop_on_error
 ... if implemented would print 'hello' every 500ms for 10 times ...
 ```
