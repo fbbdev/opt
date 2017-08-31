@@ -377,7 +377,7 @@ StringView Option<std::array<T, N>, Enum>::default_placeholder() {
 
     Option<T, std::is_enum<T>::value || Enum> opt("");
 
-    p = "{" + std::to_string(N) + "x" + opt.placeholder().to_string() + "}";
+    p = "[" + std::to_string(N) + "x" + opt.placeholder().to_string() + "]";
 
     return p;
 }
@@ -389,8 +389,8 @@ bool Option<std::array<T, N>, Enum>::parse(StringView arg, std::ostream& err) {
     if (arg.empty())
         return true;
 
-    if (arg.front() != '{' || arg.back() != '}') {
-        error(err) << "vector values should be wrapped in curly braces" << std::endl;
+    if (arg.front() != '[' || arg.back() != ']') {
+        error(err) << "vector values should be wrapped in square brackets" << std::endl;
         return false;
     }
 
@@ -475,7 +475,7 @@ StringView Option<std::vector<T>, Enum>::default_placeholder() {
 
     Option<T, std::is_enum<T>::value || Enum> opt("");
 
-    p = "{" + opt.placeholder().to_string() + ", ... }";
+    p = "[" + opt.placeholder().to_string() + ", ... ]";
 
     return p;
 }
@@ -489,7 +489,7 @@ bool Option<std::vector<T>, Enum>::parse(StringView arg, std::ostream& err) {
 
     Option<T, std::is_enum<T>::value || Enum> opt(key());
 
-    if (arg.front() != '{' || arg.back() != '}') {
+    if (arg.front() != '[' || arg.back() != ']') {
         if (!opt.parse(arg, err))
             return false;
 
@@ -575,7 +575,7 @@ StringView Option<std::set<T>, Enum>::default_placeholder() {
 
     Option<T, std::is_enum<T>::value || Enum> opt("");
 
-    p = "{" + opt.placeholder().to_string() + ", ... }";
+    p = "[" + opt.placeholder().to_string() + ", ... ]";
 
     return p;
 }
@@ -589,7 +589,7 @@ bool Option<std::set<T>, Enum>::parse(StringView arg, std::ostream& err) {
 
     Option<T, std::is_enum<T>::value || Enum> opt(key());
 
-    if (arg.front() != '{' || arg.back() != '}') {
+    if (arg.front() != '[' || arg.back() != ']') {
         if (!opt.parse(arg, err))
             return false;
 
