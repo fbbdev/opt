@@ -8,10 +8,12 @@ float: 2.4e+3). Clever usage of positional and keyword arguments can result
 in extremely readable command lines.
 
 Supported types for options are `bool`, `std::string`, `std::string_view`,
-`std::intmax_t`, `std::uintmax_t`, `float`, `double`. Composite types
-`std::complex<T>`, `std::array<T, N>`, `std::vector<T>` are also supported,
-where T is one of the supported types. Additional types can be supported
-by specializing the `parse` method of the `Option` class.
+`std::intmax_t`, `std::uintmax_t`, `float`, `double`. Enum types and
+composite types `std::complex<T>`, `std::array<T, N>`, `std::vector<T>`,
+`std::set<T>`, are also supported, where T is one of the supported types.
+
+Additional types can be supported by specializing the `parse` method
+of the `Option` class.
 
 ```c++
 template<>
